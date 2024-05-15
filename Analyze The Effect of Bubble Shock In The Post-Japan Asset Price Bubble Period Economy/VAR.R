@@ -40,11 +40,10 @@ p3 <- draw_raw("employment")
 multiplot(p1, p2, p3)
 
 ### Setting Model ###
-#----- 模型設定 -----#
-VAR.P = 4                       # 最大的落後項數
-CONST = TRUE                    # 是否有常數項
-Y     = VAR.Y(By, VAR.P)        # 設定 Y
-X     = VAR.X(By, VAR.P)        # 設定 X
+VAR.P = 4                       
+CONST = TRUE                    
+Y     = VAR.Y(By, VAR.P)        
+X     = VAR.X(By, VAR.P)        
 
 hrz=39 # the length of response
 
@@ -89,16 +88,16 @@ SVAR_AB_est <- list("A0.svar" = A0, "B0.svar" = B0)
 SVAR_AB_IRF <- VAR.svarirf.AB(By, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est)
 
 
-# 6*6個圖的time series
+# 6*6 time series
 df_IRF_plot <- matrix(NA, hrz+1, kk^2) #%>% as.tibble() ## hrz+1
 #dim(df_IRF_plot)
-h <- 0 # h表示第幾期的IRF
+h <- 0 
 for(period in SVAR_AB_IRF){
-  k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-  h <- h+1 # h表示第幾期的IRF
+  k <- 0 
+  h <- h+1 
   for(j in 1:kk){
     for(i in 1:kk){
-      k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+      k <- k+1 
       df_IRF_plot[h,k] <- period[i,j]
     }
   }
@@ -128,7 +127,7 @@ multiplot(p1,p2,p3,p4,p5,p6,
           p7,p8,p9,cols = 3)
 
 ### IRF (Bootstrap C.I.) ###
-lower = 0.025                                        # 控制成 95% CI
+lower = 0.025                                        # 95% CI
 upper = 1-lower
 kk = ncol(By)
 ddY = VAR.ddY(By, VAR.P)
@@ -140,25 +139,25 @@ T   = nrow(ddY)
 T.total= nrow(By)
 Ik  = diag(rep(1, kk))
 # 16 coef if 4 variables; 55 coef if 5 variables
-Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)              # Step 1 估計模型
+Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)              
 # residuals
 U    = VAR.EbyE(ddY, ddX, CONST)$ddU
 BSigma.u = VAR.ddSigma.OLS(ddY, ddX, CONST)
 if(CONST == TRUE){
   const = Coef[, ncol(Coef)]
-  Coef.noc= Coef[,-ncol(Coef)]                      # 刪掉 const
+  Coef.noc= Coef[,-ncol(Coef)]                      
 }else{
   const = matrix(0, kk, 1)
   Coef.noc = Coef
 }
 
-Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit # 估算 Theta.unit
-Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  # 估算 Theta.std
+Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit 
+Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  
 
 # dm.U <- U-mean(U)
 dm.U <- U
 
-N = 2000 #重抽次數
+N = 2000 
 Theta.unit.sim = vector("list", N)
 Theta.std.sim  = vector("list", N)
 
@@ -167,7 +166,6 @@ print("check dimensionality")
 dim(ddX); dim(Coef.noc); dim(dm.U)
 
 
-# 存N次重抽的IRF
 df_IRF.sim <- array(NA, c(hrz+1,kk^2,N)) #dimensions are: Time Period, Number of shock interacts with variables, page (number of Bootstrap resamplings)
 counter <- 1
 while(TRUE){
@@ -176,14 +174,14 @@ while(TRUE){
   Y.sim = matrix(0, nrow = T.total, ncol = kk)          # Y.sim = 0 #pseudo time series
   Y.sim[c(1:VAR.P),] = By[c(1:VAR.P), ] #initial values
   
-  boot.number = sample(c(1:T), replace = TRUE)      # Step 3 取出放回
+  boot.number = sample(c(1:T), replace = TRUE)      
   U.sim = dm.U[boot.number,]
   
   # predicted values given the above initial values
   last.y= c(t(By[VAR.P:1,]))
   for(ii in 1:T){
     last.y = last.y[1:(kk*VAR.P)]
-    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      # Step 4 模擬資料
+    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]     
     last.y = c(Y.sim[ii+VAR.P,], last.y)
   }
   
@@ -191,12 +189,11 @@ while(TRUE){
   
   
   #`Y.sim` is the pseudo time series
-  # Step 5 重新估算SVAR
   
   ### SVAR.sim Start ###
   
-  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        # 設定 Y
-  X_pseudo     = VAR.X(Y.sim, VAR.P)        # 設定 X
+  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        
+  X_pseudo     = VAR.X(Y.sim, VAR.P)        
   Coef.OLS_pseudo    = VAR.OLS(Y_pseudo, X_pseudo, CONST)
   Sigma.OLS_pseudo   = VAR.Sigma.OLS(Y_pseudo, X_pseudo, Coef.OLS_pseudo, CONST)
   C.Prime_pseudo <- chol(Sigma.OLS_pseudo)
@@ -206,23 +203,22 @@ while(TRUE){
   SVAR_AB_est.sim <- list("A0.svar" = A0_pseudo, "B0.svar" = B0_pseudo)
   SVAR_AB_IRF.sim <- VAR.svarirf.AB(Y.sim, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est.sim)
   
-  # 5*5個圖的time series
+  # 5*5 time series
   df_IRF_plot.sim <- matrix(NA, hrz+1, kk^2) #%>% as.tibble()
   # df_IRF.sim <- array(1:(120*25*N), c(120,25,N))
   # df_IRF.sim[2,1,1] # slicing
   
-  h <- 0 # h表示第幾期的IRF
+  h <- 0 # h period of IRF
   for(period in SVAR_AB_IRF.sim){
-    k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-    h <- h+1 # h表示第幾期的IRF
+    k <- 0 
+    h <- h+1 # h = period of IRF
     for(j in 1:kk){
       for(i in 1:kk){
-        k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+        k <- k+1 
         df_IRF_plot.sim[h,k] <- period[i,j]
       }
     }
   }
-  # 把這一次重抽得到的IRF append進`df_IRF.sim`中
   df_IRF.sim[,,counter] <- df_IRF_plot.sim
   ### SVAR.sim Ends ###
   if(counter>=N){
@@ -235,11 +231,10 @@ saveRDS(df_IRF.sim, file = "df_IRF.sim.rds")
 
 df_IRF.sim <- read_rds("df_IRF.sim.rds")
 
-# 看某一頁
 head(df_IRF.sim[,,1000])
 print(sum(is.na(df_IRF.sim)))
 
-# 畫IRF & Bootstrap C.I.
+# Draw IRF & Bootstrap C.I.
 df_IRF_plot.BS.L <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.U <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.Median <- matrix(NA, nrow = hrz+1, ncol = kk^2)
@@ -266,10 +261,8 @@ for(i in 1:kk){
     assign(nam, bind_cols(df_IRF_plot.BS.L[ind], df_IRF_plot.BS.U[ind],
                           df_IRF_plot.BS.Median[ind], df_IRF_plot.BS.Mean[ind],
                           df_IRF_plot[ind]))
-    # 改名
     evalStr <- paste0("colnames(", nam, ") <- c('Lower', 'Upper', 'Median', 'Mean', 'Actual')")
     eval(parse(text=evalStr))
-    # 圖層
     evalStr <- paste0("p", ind, " <- ", "ggplot(",nam,") +geom_hline(yintercept=0, color = 'grey')+ geom_line(aes(x = 1:nrow(", nam, "), y = Lower), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Upper), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Median), col = 'Blue')")
     eval(parse(text=evalStr))
   }
@@ -486,11 +479,10 @@ p3 <- draw_raw("cpi")
 multiplot(p1, p2, p3)
 
 ### Setting Model ###
-#----- 模型設定 -----#
-VAR.P = 4                       # 最大的落後項數
-CONST = TRUE                    # 是否有常數項
-Y     = VAR.Y(By, VAR.P)        # 設定 Y
-X     = VAR.X(By, VAR.P)        # 設定 X
+VAR.P = 4                       
+CONST = TRUE                    
+Y     = VAR.Y(By, VAR.P)      
+X     = VAR.X(By, VAR.P)        
 
 hrz=39 # the length of response
 
@@ -535,16 +527,15 @@ SVAR_AB_est <- list("A0.svar" = A0, "B0.svar" = B0)
 SVAR_AB_IRF <- VAR.svarirf.AB(By, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est)
 
 
-# 6*6個圖的time series
 df_IRF_plot <- matrix(NA, hrz+1, kk^2) #%>% as.tibble() ## hrz+1
 #dim(df_IRF_plot)
-h <- 0 # h表示第幾期的IRF
+h <- 0 
 for(period in SVAR_AB_IRF){
-  k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-  h <- h+1 # h表示第幾期的IRF
+  k <- 0 
+  h <- h+1 
   for(j in 1:kk){
     for(i in 1:kk){
-      k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+      k <- k+1 
       df_IRF_plot[h,k] <- period[i,j]
     }
   }
@@ -574,7 +565,7 @@ multiplot(p1,p2,p3,p4,p5,p6,
           p7,p8,p9,cols = 3)
 
 ### IRF (Bootstrap C.I.) ###
-lower = 0.025                                        # 控制成 95% CI
+lower = 0.025                                        # 95% CI
 upper = 1-lower
 kk = ncol(By)
 ddY = VAR.ddY(By, VAR.P)
@@ -586,25 +577,25 @@ T   = nrow(ddY)
 T.total= nrow(By)
 Ik  = diag(rep(1, kk))
 # 16 coef if 4 variables; 55 coef if 5 variables
-Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)              # Step 1 估計模型
+Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)              
 # residuals
 U    = VAR.EbyE(ddY, ddX, CONST)$ddU
 BSigma.u = VAR.ddSigma.OLS(ddY, ddX, CONST)
 if(CONST == TRUE){
   const = Coef[, ncol(Coef)]
-  Coef.noc= Coef[,-ncol(Coef)]                      # 刪掉 const
+  Coef.noc= Coef[,-ncol(Coef)]                      
 }else{
   const = matrix(0, kk, 1)
   Coef.noc = Coef
 }
 
-Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit # 估算 Theta.unit
-Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  # 估算 Theta.std
+Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit # estimate Theta.unit
+Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  # estimate Theta.std
 
 # dm.U <- U-mean(U)
 dm.U <- U
 
-N = 2000 #重抽次數
+N = 2000 
 Theta.unit.sim = vector("list", N)
 Theta.std.sim  = vector("list", N)
 
@@ -613,7 +604,6 @@ print("check dimensionality")
 dim(ddX); dim(Coef.noc); dim(dm.U)
 
 
-# 存N次重抽的IRF
 df_IRF.sim <- array(NA, c(hrz+1,kk^2,N)) #dimensions are: Time Period, Number of shock interacts with variables, page (number of Bootstrap resamplings)
 counter <- 1
 while(TRUE){
@@ -622,14 +612,14 @@ while(TRUE){
   Y.sim = matrix(0, nrow = T.total, ncol = kk)          # Y.sim = 0 #pseudo time series
   Y.sim[c(1:VAR.P),] = By[c(1:VAR.P), ] #initial values
   
-  boot.number = sample(c(1:T), replace = TRUE)      # Step 3 取出放回
+  boot.number = sample(c(1:T), replace = TRUE)      
   U.sim = dm.U[boot.number,]
   
   # predicted values given the above initial values
   last.y= c(t(By[VAR.P:1,]))
   for(ii in 1:T){
     last.y = last.y[1:(kk*VAR.P)]
-    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      # Step 4 模擬資料
+    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      
     last.y = c(Y.sim[ii+VAR.P,], last.y)
   }
   
@@ -637,12 +627,11 @@ while(TRUE){
   
   
   #`Y.sim` is the pseudo time series
-  # Step 5 重新估算SVAR
   
   ### SVAR.sim Start ###
   
-  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        # 設定 Y
-  X_pseudo     = VAR.X(Y.sim, VAR.P)        # 設定 X
+  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        
+  X_pseudo     = VAR.X(Y.sim, VAR.P)        
   Coef.OLS_pseudo    = VAR.OLS(Y_pseudo, X_pseudo, CONST)
   Sigma.OLS_pseudo   = VAR.Sigma.OLS(Y_pseudo, X_pseudo, Coef.OLS_pseudo, CONST)
   C.Prime_pseudo <- chol(Sigma.OLS_pseudo)
@@ -652,23 +641,21 @@ while(TRUE){
   SVAR_AB_est.sim <- list("A0.svar" = A0_pseudo, "B0.svar" = B0_pseudo)
   SVAR_AB_IRF.sim <- VAR.svarirf.AB(Y.sim, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est.sim)
   
-  # 5*5個圖的time series
   df_IRF_plot.sim <- matrix(NA, hrz+1, kk^2) #%>% as.tibble()
   # df_IRF.sim <- array(1:(120*25*N), c(120,25,N))
   # df_IRF.sim[2,1,1] # slicing
   
-  h <- 0 # h表示第幾期的IRF
+  h <- 0 
   for(period in SVAR_AB_IRF.sim){
-    k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-    h <- h+1 # h表示第幾期的IRF
+    k <- 0 
+    h <- h+1 
     for(j in 1:kk){
       for(i in 1:kk){
-        k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+        k <- k+1 
         df_IRF_plot.sim[h,k] <- period[i,j]
       }
     }
   }
-  # 把這一次重抽得到的IRF append進`df_IRF.sim`中
   df_IRF.sim[,,counter] <- df_IRF_plot.sim
   ### SVAR.sim Ends ###
   if(counter>=N){
@@ -681,11 +668,10 @@ saveRDS(df_IRF.sim, file = "df_IRF.sim.rds")
 
 df_IRF.sim <- read_rds("df_IRF.sim.rds")
 
-# 看某一頁
 head(df_IRF.sim[,,1000])
 print(sum(is.na(df_IRF.sim)))
 
-# 畫IRF & Bootstrap C.I.
+# IRF & Bootstrap C.I.
 df_IRF_plot.BS.L <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.U <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.Median <- matrix(NA, nrow = hrz+1, ncol = kk^2)
@@ -712,10 +698,8 @@ for(i in 1:kk){
     assign(nam, bind_cols(df_IRF_plot.BS.L[ind], df_IRF_plot.BS.U[ind],
                           df_IRF_plot.BS.Median[ind], df_IRF_plot.BS.Mean[ind],
                           df_IRF_plot[ind]))
-    # 改名
     evalStr <- paste0("colnames(", nam, ") <- c('Lower', 'Upper', 'Median', 'Mean', 'Actual')")
     eval(parse(text=evalStr))
-    # 圖層
     evalStr <- paste0("p", ind, " <- ", "ggplot(",nam,") +geom_hline(yintercept=0, color = 'grey')+ geom_line(aes(x = 1:nrow(", nam, "), y = Lower), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Upper), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Median), col = 'Blue')")
     eval(parse(text=evalStr))
   }
@@ -897,7 +881,6 @@ data.err["e2"] = data.err2$e2
 reg3 <- lm(cpi_d ~ Period + e1 + e2 + interest_rate_d, data = data.err)
 summary(reg3)
 
-###衝擊減掉1994Q4###
 data.err["e2"] = data.err["e2"] - data.err$e2[6]
 data.err["e1"] = data.err["e1"] - data.err$e1[6]
 reg3 <- lm(cpi_d ~ Period + e1 + e2 + interest_rate_d, data = data.err)
@@ -942,11 +925,10 @@ p3 <- draw_raw("gdp")
 multiplot(p1, p2, p3)
 
 ### Setting Model ###
-#----- 模型設定 -----#
-VAR.P = 4                       # 最大的落後項數
-CONST = TRUE                    # 是否有常數項
-Y     = VAR.Y(By, VAR.P)        # 設定 Y
-X     = VAR.X(By, VAR.P)        # 設定 X
+VAR.P = 4                       
+CONST = TRUE                    
+Y     = VAR.Y(By, VAR.P)        
+X     = VAR.X(By, VAR.P)        
 
 hrz=39 # the length of response
 
@@ -991,16 +973,15 @@ SVAR_AB_est <- list("A0.svar" = A0, "B0.svar" = B0)
 SVAR_AB_IRF <- VAR.svarirf.AB(By, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est)
 
 
-# 6*6個圖的time series
 df_IRF_plot <- matrix(NA, hrz+1, kk^2) #%>% as.tibble() ## hrz+1
 #dim(df_IRF_plot)
-h <- 0 # h表示第幾期的IRF
+h <- 0 
 for(period in SVAR_AB_IRF){
-  k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-  h <- h+1 # h表示第幾期的IRF
+  k <- 0 
+  h <- h+1 
   for(j in 1:kk){
     for(i in 1:kk){
-      k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+      k <- k+1 
       df_IRF_plot[h,k] <- period[i,j]
     }
   }
@@ -1030,7 +1011,7 @@ multiplot(p1,p2,p3,p4,p5,p6,
           p7,p8,p9,cols = 3)
 
 ### IRF (Bootstrap C.I.) ###
-lower = 0.025                                        # 控制成 95% CI
+lower = 0.025                                        # 95% CI
 upper = 1-lower
 kk = ncol(By)
 ddY = VAR.ddY(By, VAR.P)
@@ -1042,25 +1023,25 @@ T   = nrow(ddY)
 T.total= nrow(By)
 Ik  = diag(rep(1, kk))
 # 16 coef if 4 variables; 55 coef if 5 variables
-Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)              # Step 1 估計模型
+Coef = t(VAR.EbyE(ddY, ddX, CONST)$ddA)          
 # residuals
 U    = VAR.EbyE(ddY, ddX, CONST)$ddU
 BSigma.u = VAR.ddSigma.OLS(ddY, ddX, CONST)
 if(CONST == TRUE){
   const = Coef[, ncol(Coef)]
-  Coef.noc= Coef[,-ncol(Coef)]                      # 刪掉 const
+  Coef.noc= Coef[,-ncol(Coef)]                   
 }else{
   const = matrix(0, kk, 1)
   Coef.noc = Coef
 }
 
-Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit # 估算 Theta.unit
-Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  # 估算 Theta.std
+Theta.unit= VAR.Theta(Coef, h, BSigma.u, CONST)$unit 
+Theta.std = VAR.Theta(Coef, h, BSigma.u, CONST)$std  
 
 # dm.U <- U-mean(U)
 dm.U <- U
 
-N = 2000 #重抽次數
+N = 2000 
 Theta.unit.sim = vector("list", N)
 Theta.std.sim  = vector("list", N)
 
@@ -1069,7 +1050,6 @@ print("check dimensionality")
 dim(ddX); dim(Coef.noc); dim(dm.U)
 
 
-# 存N次重抽的IRF
 df_IRF.sim <- array(NA, c(hrz+1,kk^2,N)) #dimensions are: Time Period, Number of shock interacts with variables, page (number of Bootstrap resamplings)
 counter <- 1
 while(TRUE){
@@ -1078,14 +1058,14 @@ while(TRUE){
   Y.sim = matrix(0, nrow = T.total, ncol = kk)          # Y.sim = 0 #pseudo time series
   Y.sim[c(1:VAR.P),] = By[c(1:VAR.P), ] #initial values
   
-  boot.number = sample(c(1:T), replace = TRUE)      # Step 3 取出放回
+  boot.number = sample(c(1:T), replace = TRUE)      
   U.sim = dm.U[boot.number,]
   
   # predicted values given the above initial values
   last.y= c(t(By[VAR.P:1,]))
   for(ii in 1:T){
     last.y = last.y[1:(kk*VAR.P)]
-    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      # Step 4 模擬資料
+    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      
     last.y = c(Y.sim[ii+VAR.P,], last.y)
   }
   
@@ -1093,12 +1073,11 @@ while(TRUE){
   
   
   #`Y.sim` is the pseudo time series
-  # Step 5 重新估算SVAR
   
   ### SVAR.sim Start ###
   
-  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        # 設定 Y
-  X_pseudo     = VAR.X(Y.sim, VAR.P)        # 設定 X
+  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        
+  X_pseudo     = VAR.X(Y.sim, VAR.P)        
   Coef.OLS_pseudo    = VAR.OLS(Y_pseudo, X_pseudo, CONST)
   Sigma.OLS_pseudo   = VAR.Sigma.OLS(Y_pseudo, X_pseudo, Coef.OLS_pseudo, CONST)
   C.Prime_pseudo <- chol(Sigma.OLS_pseudo)
@@ -1108,23 +1087,21 @@ while(TRUE){
   SVAR_AB_est.sim <- list("A0.svar" = A0_pseudo, "B0.svar" = B0_pseudo)
   SVAR_AB_IRF.sim <- VAR.svarirf.AB(Y.sim, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est.sim)
   
-  # 5*5個圖的time series
   df_IRF_plot.sim <- matrix(NA, hrz+1, kk^2) #%>% as.tibble()
   # df_IRF.sim <- array(1:(120*25*N), c(120,25,N))
   # df_IRF.sim[2,1,1] # slicing
   
-  h <- 0 # h表示第幾期的IRF
+  h <- 0 
   for(period in SVAR_AB_IRF.sim){
-    k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-    h <- h+1 # h表示第幾期的IRF
+    k <- 0 
+    h <- h+1 
     for(j in 1:kk){
       for(i in 1:kk){
-        k <- k+1 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
+        k <- k+1 
         df_IRF_plot.sim[h,k] <- period[i,j]
       }
     }
   }
-  # 把這一次重抽得到的IRF append進`df_IRF.sim`中
   df_IRF.sim[,,counter] <- df_IRF_plot.sim
   ### SVAR.sim Ends ###
   if(counter>=N){
@@ -1137,11 +1114,10 @@ saveRDS(df_IRF.sim, file = "df_IRF.sim.rds")
 
 df_IRF.sim <- read_rds("df_IRF.sim.rds")
 
-# 看某一頁
 head(df_IRF.sim[,,1000])
 print(sum(is.na(df_IRF.sim)))
 
-# 畫IRF & Bootstrap C.I.
+# Draw IRF & Bootstrap C.I.
 df_IRF_plot.BS.L <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.U <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.Median <- matrix(NA, nrow = hrz+1, ncol = kk^2)
@@ -1168,10 +1144,8 @@ for(i in 1:kk){
     assign(nam, bind_cols(df_IRF_plot.BS.L[ind], df_IRF_plot.BS.U[ind],
                           df_IRF_plot.BS.Median[ind], df_IRF_plot.BS.Mean[ind],
                           df_IRF_plot[ind]))
-    # 改名
     evalStr <- paste0("colnames(", nam, ") <- c('Lower', 'Upper', 'Median', 'Mean', 'Actual')")
     eval(parse(text=evalStr))
-    # 圖層
     evalStr <- paste0("p", ind, " <- ", "ggplot(",nam,") +geom_hline(yintercept=0, color = 'grey')+ geom_line(aes(x = 1:nrow(", nam, "), y = Lower), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Upper), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Median), col = 'Blue')")
     eval(parse(text=evalStr))
   }
@@ -1353,7 +1327,7 @@ data.err["e2"] = data.err2$e2
 reg2 <- lm(gdp_d~ Period + e1 + e2 + interest_rate_d, data = data.err)
 summary(reg2)
 
-###衝擊減掉1994Q4###
+### substract 1994Q4###
 data.err["e2"] = data.err["e2"] - data.err$e2[6]
 data.err["e1"] = data.err["e1"] - data.err$e1[6]
 reg2 <- lm(gdp_d~ Period + e1 + e2 + interest_rate_d, data = data.err)
@@ -1391,7 +1365,6 @@ p3 <- draw_raw("employment")
 multiplot(p1, p2, p3)
 
 ### Setting Model ###
-#----- 模型設定 -----#
 VAR.P = 4                       # 最大的落後項數
 CONST = TRUE                    # 是否有常數項
 Y     = VAR.Y(By, VAR.P)        # 設定 Y
@@ -4193,14 +4166,14 @@ while(TRUE){
   Y.sim = matrix(0, nrow = T.total, ncol = kk)          # Y.sim = 0 #pseudo time series
   Y.sim[c(1:VAR.P),] = By[c(1:VAR.P), ] #initial values
   
-  boot.number = sample(c(1:T), replace = TRUE)      # Step 3 取出放回
+  boot.number = sample(c(1:T), replace = TRUE)     
   U.sim = dm.U[boot.number,]
   
   # predicted values given the above initial values
   last.y= c(t(By[VAR.P:1,]))
   for(ii in 1:T){
     last.y = last.y[1:(kk*VAR.P)]
-    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      # Step 4 模擬資料
+    Y.sim[ii+VAR.P, ] = Coef.noc %*% last.y + const + U.sim[ii,]      
     last.y = c(Y.sim[ii+VAR.P,], last.y)
   }
   
@@ -4208,12 +4181,11 @@ while(TRUE){
   
   
   #`Y.sim` is the pseudo time series
-  # Step 5 重新估算SVAR
   
   ### SVAR.sim Start ###
   
-  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        # 設定 Y
-  X_pseudo     = VAR.X(Y.sim, VAR.P)        # 設定 X
+  Y_pseudo     = VAR.Y(Y.sim, VAR.P)        
+  X_pseudo     = VAR.X(Y.sim, VAR.P)        
   Coef.OLS_pseudo    = VAR.OLS(Y_pseudo, X_pseudo, CONST)
   Sigma.OLS_pseudo   = VAR.Sigma.OLS(Y_pseudo, X_pseudo, Coef.OLS_pseudo, CONST)
   C.Prime_pseudo <- chol(Sigma.OLS_pseudo)
@@ -4223,15 +4195,14 @@ while(TRUE){
   SVAR_AB_est.sim <- list("A0.svar" = A0_pseudo, "B0.svar" = B0_pseudo)
   SVAR_AB_IRF.sim <- VAR.svarirf.AB(Y.sim, VAR.P, Amat, Bmat, h = hrz, CONST, SVAR_AB_est = SVAR_AB_est.sim)
   
-  # 5*5個圖的time series
   df_IRF_plot.sim <- matrix(NA, hrz+1, kk^2) #%>% as.tibble()
   # df_IRF.sim <- array(1:(120*25*N), c(120,25,N))
   # df_IRF.sim[2,1,1] # slicing
   
-  h <- 0 # h表示第幾期的IRF
+  h <- 0
   for(period in SVAR_AB_IRF.sim){
-    k <- 0 # k表示把5*5的矩陣攤平到25個col的df時，要攤到第幾個columns上
-    h <- h+1 # h表示第幾期的IRF
+    k <- 0 #
+    h <- h+1 
     for(j in 1:kk){
       for(i in 1:kk){
         k <- k+1
@@ -4254,7 +4225,7 @@ df_IRF.sim <- read_rds("df_IRF.sim.rds")
 head(df_IRF.sim[,,1000])
 print(sum(is.na(df_IRF.sim)))
 
-# 畫IRF & Bootstrap C.I.
+# IRF & Bootstrap C.I.
 df_IRF_plot.BS.L <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.U <- matrix(NA, nrow = hrz+1, ncol = kk^2)
 df_IRF_plot.BS.Median <- matrix(NA, nrow = hrz+1, ncol = kk^2)
@@ -4504,11 +4475,10 @@ p3 <- draw_raw("cpi")
 multiplot(p1, p2, p3)
 
 ### Setting Model ###
-#----- 模型設定 -----#
-VAR.P = 4                       # 最大的落後項數
-CONST = TRUE                    # 是否有常數項
-Y     = VAR.Y(By, VAR.P)        # 設定 Y
-X     = VAR.X(By, VAR.P)        # 設定 X
+VAR.P = 4                       
+CONST = TRUE                    
+Y     = VAR.Y(By, VAR.P)       
+X     = VAR.X(By, VAR.P)        
 
 hrz=39 # the length of response
 
@@ -4694,10 +4664,8 @@ for(i in 1:kk){
     assign(nam, bind_cols(df_IRF_plot.BS.L[ind], df_IRF_plot.BS.U[ind],
                           df_IRF_plot.BS.Median[ind], df_IRF_plot.BS.Mean[ind],
                           df_IRF_plot[ind]))
-    # 改名
     evalStr <- paste0("colnames(", nam, ") <- c('Lower', 'Upper', 'Median', 'Mean', 'Actual')")
     eval(parse(text=evalStr))
-    # 圖層
     evalStr <- paste0("p", ind, " <- ", "ggplot(",nam,") +geom_hline(yintercept=0, color = 'grey')+ geom_line(aes(x = 1:nrow(", nam, "), y = Lower), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Upper), linetype = 'dashed', col='red')+geom_line(aes(x = 1:nrow(", nam, "), y = Median), col = 'Blue')")
     eval(parse(text=evalStr))
   }
